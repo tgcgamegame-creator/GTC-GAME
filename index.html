@@ -244,3 +244,56 @@
     }
   </script>
 </body>
+<body>
+  <!-- game HTML elements -->
+  <button id="loginBtn">Login with Google</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    const firebaseConfig = { /* ka saka naka */ };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    
+    let currentUser = null;
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const result = await signInWithPopup(auth, provider);
+      currentUser = result.user;
+      await loadUserData();
+      alert("✅ Logged in as " + currentUser.displayName);
+    });
+
+    async function loadUserData() {
+      if (!currentUser) return;
+      const userRef = doc(db, "users", currentUser.uid);
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        taps = data.taps || 0;
+        blue = data.blue || 0;
+        yellow = data.yellow || 0;
+        updateDisplay();
+      } else {
+        await setDoc(userRef, { taps:0, blue:0, yellow:0 });
+      }
+    }
+
+    async function saveUserData() {
+      if (!currentUser) return;
+      const userRef = doc(db, "users", currentUser.uid);
+      await setDoc(userRef, { taps, blue, yellow });
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        await loadUserData();
+      }
+    });
+  </script>
+</body>
