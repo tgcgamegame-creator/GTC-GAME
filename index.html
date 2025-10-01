@@ -143,12 +143,10 @@
     });
 
     function updateDisplay() {
-      // convert Blue to Yellow
       while (blue >= 200) {
         yellow++;
         blue -= 200;
       }
-      // convert Yellow to USD
       usd = yellow * 0.10;
 
       tapsDisplay.textContent = taps;
@@ -175,28 +173,89 @@
       document.getElementById("message").value = "";
     }
   </script>
-</body><script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
-    authDomain: "tgc-game-f0f44.firebaseapp.com",
-    projectId: "tgc-game-f0f44",
-    storageBucket: "tgc-game-f0f44.firebasestorage.app",
-    messagingSenderId: "429764249913",
-    appId: "1:429764249913:web:1dd40b745d055b952a80e8",
-    measurementId: "G-GV2GSJB2BF"
-  };
+  <!-- Firebase Integration -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-                                                  </html>
-                                                  
+    const firebaseConfig = {
+      apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
+      authDomain: "tgc-game-f0f44.firebaseapp.com",
+      projectId: "tgc-game-f0f44",
+      storageBucket: "tgc-game-f0f44.firebasestorage.app",
+      messagingSenderId: "429764249913",
+      appId: "1:429764249913:web:1dd40b745d055b952a80e8",
+      measurementId: "G-GV2GSJB2BF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    async function login() {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        currentUser = result.user;
+
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+        if (!docSnap.exists()) {
+          await setDoc(userRef, { coins: 0, blue: 0, yellow: 0, taps: 0 });
+        } else {
+          const data = docSnap.data();
+          taps = data.taps || 0;
+          blue = data.blue || 0;
+          yellow = data.yellow || 0;
+          updateDisplay();
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+        if (!docSnap.exists()) {
+          await setDoc(userRef, { coins: 0, blue: 0, yellow: 0, taps: 0 });
+        } else {
+          const data = docSnap.data();
+          taps = data.taps || 0;
+          blue = data.blue || 0;
+          yellow = data.yellow || 0;
+          updateDisplay();
+        }
+      } else {
+        console.log("No user signed in");
+      }
+    });
+
+    async function saveUserData() {
+      if (!currentUser) return;
+      const userRef = doc(db, "users", currentUser.uid);
+      await setDoc(userRef, { taps, blue, yellow });
+    }
+
+    const originalUpdateDisplay = updateDisplay;
+    updateDisplay = () => {
+      originalUpdateDisplay();
+      saveUserData();
+    };
+
+    window.addEventListener("load", () => {
+      login();
+    });
+  </script>
+
+</body>
+</html>
