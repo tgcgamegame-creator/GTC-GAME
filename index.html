@@ -83,7 +83,71 @@
     }
   </style>
 </head>
-<body>
+<body><script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc } 
+    from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
+    authDomain: "tgc-game-f0f44.firebaseapp.com",
+    projectId: "tgc-game-f0f44",
+    storageBucket: "tgc-game-f0f44.appspot.com",
+    messagingSenderId: "429764249913",
+    appId: "1:429764249913:web:1dd40b745d055b952a80e8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  const db = getFirestore(app);
+
+  // Login
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    await signInWithPopup(auth, provider);
+  });
+
+  // Listen for login state
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const uid = user.uid;
+      const ref = doc(db, "users", uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        // load saved coins
+        const data = snap.data();
+        taps = data.taps || 0;
+        blue = data.blue || 0;
+        yellow = data.yellow || 0;
+        usd = data.usd || 0;
+        updateDisplay();
+      }
+    }
+  });
+
+  // Save progress
+  async function saveProgress() {
+    if (auth.currentUser) {
+      const uid = auth.currentUser.uid;
+      await setDoc(doc(db, "users", uid), {
+        taps, blue, yellow, usd
+      });
+    }
+  }
+
+  // Call saveProgress() duk lokacin da aka yi tap
+  tapBtn.addEventListener("click", () => {
+    taps++;
+    if (taps >= 500) {
+      blue++;
+      taps = 0;
+    }
+    updateDisplay();
+    saveProgress();
+  });
+</script>
   <h1> 🪙TGC GAME🪙 </h1>
 
   <div class="game-container">
