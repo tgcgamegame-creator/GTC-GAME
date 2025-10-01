@@ -90,7 +90,9 @@
 <body>
   <h1> 🪙TGC GAME🪙 </h1>
 
-  <div class="game-container">
+  <button id="loginBtn">Login with Google</button>
+
+  <div class="game-container" style="display:none;" id="gameSection">
     <button id="tapButton">TAP</button>
     <div class="stats">
       <p>Taps: <span id="taps">0</span> / 500</p>
@@ -100,7 +102,6 @@
     </div>
     <button id="watchAd">🎥 Watch Video to earn 1 Blue</button>
     <button id="withdraw">Withdraw</button>
-    <button id="loginBtn">Login with Google</button>
     <p style="font-size:13px;color:#555;margin-top:10px;">
       Conversion: 500 Taps → 1 Blue • 200 Blue → 1 Yellow • 1 Yellow = $0.10 • Minimum withdraw: $5 (Litecoin)<br>
       Video rewards are given only when a video ad is loaded and watched fully (simulated here).
@@ -115,38 +116,78 @@
     <button onclick="sendMessage()">Send Message</button>
   </div>
 
+  <!-- Firebase SDK -->
   <script type="module">
-    // ================= Firebase Setup =================
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } 
-      from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc } 
-      from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    // Import Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
       authDomain: "tgc-game-f0f44.firebaseapp.com",
       projectId: "tgc-game-f0f44",
-      storageBucket: "tgc-game-f0f44.firebasestorage.app",
+      storageBucket: "tgc-game-f0f44.appspot.com",
       messagingSenderId: "429764249913",
       appId: "1:429764249913:web:1dd40b745d055b952a80e8",
       measurementId: "G-GV2GSJB2BF"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const db = getFirestore(app);
 
-    // ================= Game Logic =================
+    // Game variables
     let taps = 0, blue = 0, yellow = 0, usd = 0;
+    let userId = null;
 
     const tapBtn = document.getElementById("tapButton");
     const tapsDisplay = document.getElementById("taps");
     const blueDisplay = document.getElementById("blue");
     const yellowDisplay = document.getElementById("yellow");
     const usdDisplay = document.getElementById("usd");
+    const loginBtn = document.getElementById("loginBtn");
+    const gameSection = document.getElementById("gameSection");
 
+    // Login with Google
+    loginBtn.addEventListener("click", async () => {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        userId = result.user.uid;
+        loginBtn.style.display = "none";
+        gameSection.style.display = "block";
+        await loadData();
+      } catch (error) {
+        console.error("Login failed:", error);
+      }
+    });
+
+    // Load saved data
+    async function loadData() {
+      if (!userId) return;
+      const ref = doc(db, "users", userId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        taps = data.taps || 0;
+        blue = data.blue || 0;
+        yellow = data.yellow || 0;
+        usd = data.usd || 0;
+        updateDisplay();
+      }
+    }
+
+    // Save data
+    async function saveData() {
+      if (!userId) return;
+      const ref = doc(db, "users", userId);
+      await setDoc(ref, { taps, blue, yellow, usd });
+    }
+
+    // Game functions
     tapBtn.addEventListener("click", () => {
       taps++;
       if (taps >= 500) {
@@ -154,14 +195,14 @@
         taps = 0;
       }
       updateDisplay();
-      saveProgress();
+      saveData();
     });
 
     document.getElementById("watchAd").addEventListener("click", () => {
       alert("🎥 Ad watched! You earned 1 Blue.");
       blue++;
       updateDisplay();
-      saveProgress();
+      saveData();
     });
 
     document.getElementById("withdraw").addEventListener("click", () => {
@@ -184,51 +225,23 @@
       usdDisplay.textContent = usd.toFixed(2);
     }
 
-    // ================= Firebase Auth & Save =================
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      await signInWithPopup(auth, provider);
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const uid = user.uid;
-        const ref = doc(db, "users", uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          taps = data.taps || 0;
-          blue = data.blue || 0;
-          yellow = data.yellow || 0;
-          usd = data.usd || 0;
-          updateDisplay();
-        } else {
-          await setDoc(ref, { taps, blue, yellow, usd });
-        }
-      }
-    });
-
-    async function saveProgress() {
-      if (auth.currentUser) {
-        const uid = auth.currentUser.uid;
-        await setDoc(doc(db, "users", uid), { taps, blue, yellow, usd });
-      }
-    }
-
-    // ================= Contact Form =================
-    window.sendMessage = function() {
+    function sendMessage() {
       const name = document.getElementById("name").value;
       const email = document.getElementById("email").value;
       const message = document.getElementById("message").value;
+
       if (message.trim() === "") {
         alert("Please enter a message.");
         return;
       }
+
       let stored = JSON.parse(localStorage.getItem("messages")) || [];
       stored.push({ name, email, message });
       localStorage.setItem("messages", JSON.stringify(stored));
+
       alert("📨 Message saved locally (and can be sent by email).");
       document.getElementById("message").value = "";
     }
   </script>
 </body>
-</html> 
+</html>
