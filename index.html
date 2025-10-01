@@ -260,4 +260,39 @@
 </body><button id="loginBtn" style="margin:15px; padding:10px 20px; background:#28a745; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer;">
   🔑 Login with Google
 </button>
-</html>
+</html><script type="module">
+  // Firebase imports
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
+    authDomain: "tgc-game-f0f44.firebaseapp.com",
+    projectId: "tgc-game-f0f44",
+    storageBucket: "tgc-game-f0f44.firebasestorage.app",
+    messagingSenderId: "429764249913",
+    appId: "1:429764249913:web:1dd40b745d055b952a80e8",
+    measurementId: "G-GV2GSJB2BF"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  // Handle login
+  document.getElementById("loginBtn").addEventListener("click", () => {
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        const user = result.user;
+        alert("✅ Logged in as: " + user.displayName);
+        // nan zaka iya kiran function don save coins zuwa Firestore ko Realtime DB
+      })
+      .catch((error) => {
+        console.error(error);
+        alert("❌ Login failed!");
+      });
+  });
+</script>
