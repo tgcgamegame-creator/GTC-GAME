@@ -53,9 +53,18 @@
       cursor: pointer;
       font-size: 15px;
     }
-    #watchAd { background: #007bff; color: white; }
-    #withdraw { background: orange; color: white; }
-    #loginBtn { background: #28a745; color: white; }
+    #watchAd {
+      background: #007bff;
+      color: white;
+    }
+    #withdraw {
+      background: orange;
+      color: white;
+    }
+    #loginBtn {
+      background: green;
+      color: white;
+    }
     .contact {
       width: 100%;
       max-width: 400px;
@@ -81,9 +90,6 @@
 <body>
   <h1> 🪙TGC GAME🪙 </h1>
 
-  <!-- Google Login Button -->
-  <button id="loginBtn">🔑 Login with Google</button>
-
   <div class="game-container">
     <button id="tapButton">TAP</button>
     <div class="stats">
@@ -94,6 +100,7 @@
     </div>
     <button id="watchAd">🎥 Watch Video to earn 1 Blue</button>
     <button id="withdraw">Withdraw</button>
+    <button id="loginBtn">Login with Google</button>
     <p style="font-size:13px;color:#555;margin-top:10px;">
       Conversion: 500 Taps → 1 Blue • 200 Blue → 1 Yellow • 1 Yellow = $0.10 • Minimum withdraw: $5 (Litecoin)<br>
       Video rewards are given only when a video ad is loaded and watched fully (simulated here).
@@ -108,23 +115,22 @@
     <button onclick="sendMessage()">Send Message</button>
   </div>
 
-  <!-- Firebase + Game Logic -->
   <script type="module">
-    // Firebase SDK
+    // ================= Firebase Setup =================
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } 
       from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } 
       from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-    // Config naka
     const firebaseConfig = {
       apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
       authDomain: "tgc-game-f0f44.firebaseapp.com",
       projectId: "tgc-game-f0f44",
-      storageBucket: "tgc-game-f0f44.appspot.com",
+      storageBucket: "tgc-game-f0f44.firebasestorage.app",
       messagingSenderId: "429764249913",
-      appId: "1:429764249913:web:1dd40b745d055b952a80e8"
+      appId: "1:429764249913:web:1dd40b745d055b952a80e8",
+      measurementId: "G-GV2GSJB2BF"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -132,7 +138,7 @@
     const provider = new GoogleAuthProvider();
     const db = getFirestore(app);
 
-    // Game variables
+    // ================= Game Logic =================
     let taps = 0, blue = 0, yellow = 0, usd = 0;
 
     const tapBtn = document.getElementById("tapButton");
@@ -141,48 +147,6 @@
     const yellowDisplay = document.getElementById("yellow");
     const usdDisplay = document.getElementById("usd");
 
-    function updateDisplay() {
-      while (blue >= 200) {
-        yellow++;
-        blue -= 200;
-      }
-      usd = yellow * 0.10;
-
-      tapsDisplay.textContent = taps;
-      blueDisplay.textContent = blue;
-      yellowDisplay.textContent = yellow;
-      usdDisplay.textContent = usd.toFixed(2);
-    }
-
-    async function saveProgress() {
-      if (auth.currentUser) {
-        const uid = auth.currentUser.uid;
-        await setDoc(doc(db, "users", uid), { taps, blue, yellow, usd });
-      }
-    }
-
-    // Login
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      await signInWithPopup(auth, provider);
-    });
-
-    // Auth state
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          taps = data.taps || 0;
-          blue = data.blue || 0;
-          yellow = data.yellow || 0;
-          usd = data.usd || 0;
-          updateDisplay();
-        }
-      }
-    });
-
-    // Game logic
     tapBtn.addEventListener("click", () => {
       taps++;
       if (taps >= 500) {
@@ -208,24 +172,63 @@
       }
     });
 
-    // Contact messages
-    window.sendMessage = function () {
+    function updateDisplay() {
+      while (blue >= 200) {
+        yellow++;
+        blue -= 200;
+      }
+      usd = yellow * 0.10;
+      tapsDisplay.textContent = taps;
+      blueDisplay.textContent = blue;
+      yellowDisplay.textContent = yellow;
+      usdDisplay.textContent = usd.toFixed(2);
+    }
+
+    // ================= Firebase Auth & Save =================
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      await signInWithPopup(auth, provider);
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const uid = user.uid;
+        const ref = doc(db, "users", uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          taps = data.taps || 0;
+          blue = data.blue || 0;
+          yellow = data.yellow || 0;
+          usd = data.usd || 0;
+          updateDisplay();
+        } else {
+          await setDoc(ref, { taps, blue, yellow, usd });
+        }
+      }
+    });
+
+    async function saveProgress() {
+      if (auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        await setDoc(doc(db, "users", uid), { taps, blue, yellow, usd });
+      }
+    }
+
+    // ================= Contact Form =================
+    window.sendMessage = function() {
       const name = document.getElementById("name").value;
       const email = document.getElementById("email").value;
       const message = document.getElementById("message").value;
-
       if (message.trim() === "") {
         alert("Please enter a message.");
         return;
       }
-
       let stored = JSON.parse(localStorage.getItem("messages")) || [];
       stored.push({ name, email, message });
       localStorage.setItem("messages", JSON.stringify(stored));
-
-      alert("📨 Message saved locally.");
+      alert("📨 Message saved locally (and can be sent by email).");
       document.getElementById("message").value = "";
     }
   </script>
 </body>
-    </html>
+</html> 
