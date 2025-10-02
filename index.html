@@ -296,4 +296,188 @@
       }
     });
   </script>
-</body>
+</body><script type="module">
+/*
+  Paste wannan a ƙarshe na index.html (kafin </body>)
+  Yana amfani da variables naka: taps, blue, yellow, updateDisplay()
+  - Dole a sami button #loginBtn a page
+  - Dole a sami functions/elems taps/blue/yellow/usd/updateDisplay daga game ɗinka
+*/
+
+// Firebase imports (12.3.0)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+// ----- Your firebaseConfig: (use your real config; storageBucket should be .appspot.com) -----
+const firebaseConfig = {
+  apiKey: "AIzaSyDZcyVRTq14vpQod-dMQQceo10gl7qvRbA",
+  authDomain: "tgc-game-f0f44.firebaseapp.com",
+  projectId: "tgc-game-f0f44",
+  storageBucket: "tgc-game-f0f44.appspot.com",
+  messagingSenderId: "429764249913",
+  appId: "1:429764249913:web:1dd40b745d055b952a80e8"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
+
+let currentUser = null;
+const LOCAL_KEY = "tgc_game_save_v1";
+
+// ---- LOCAL STORAGE helpers ----
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return false;
+    const obj = JSON.parse(raw);
+    taps = obj.taps || 0;
+    blue = obj.blue || 0;
+    yellow = obj.yellow || 0;
+    // usd is derived from yellow in your game, so updateDisplay will recalc
+    updateDisplay();
+    console.log("Loaded local save:", obj);
+    return true;
+  } catch (e) {
+    console.warn("loadLocal failed", e);
+    return false;
+  }
+}
+
+function saveLocal() {
+  try {
+    const payload = { taps, blue, yellow };
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
+    // console.log("Saved local:", payload);
+  } catch(e) {
+    console.warn("saveLocal failed", e);
+  }
+}
+
+// ---- FIRESTORE helpers ----
+async function loadCloud(uid) {
+  try {
+    const ref = doc(db, "users", uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      taps = data.taps || 0;
+      blue = data.blue || 0;
+      yellow = data.yellow || 0;
+      updateDisplay();
+      // sync cloud -> local
+      saveLocal();
+      console.log("Loaded cloud data for", uid, data);
+      return true;
+    } else {
+      console.log("No cloud doc for", uid);
+      return false;
+    }
+  } catch (e) {
+    console.error("loadCloud error", e);
+    return false;
+  }
+}
+
+async function saveCloud(uid) {
+  if (!uid) return;
+  try {
+    const ref = doc(db, "users", uid);
+    await setDoc(ref, { taps, blue, yellow }, { merge: true });
+    console.log("Saved cloud for", uid, { taps, blue, yellow });
+  } catch (e) {
+    console.error("saveCloud error", e);
+  }
+}
+
+// ---- Sync strategy on login ----
+// - If cloud doc exists => use cloud (cloud wins), overwrite local
+// - Else if no cloud and local exists => upload local to cloud
+// You can change to merge logic if you prefer.
+async function onUserLoggedIn(user) {
+  currentUser = user;
+  const uid = user.uid;
+  // try cloud first
+  const cloudExists = await loadCloud(uid);
+  if (!cloudExists) {
+    // if cloud empty but local exists upload local
+    const hasLocal = loadLocal(); // loads into memory
+    if (hasLocal) {
+      await saveCloud(uid);
+      console.log("Uploaded local save to cloud for", uid);
+    } else {
+      // no cloud, no local: create empty doc
+      await saveCloud(uid);
+      console.log("Created blank cloud doc for", uid);
+    }
+  }
+}
+
+// ---- Hook into auth ----
+document.getElementById("loginBtn")?.addEventListener("click", async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    console.error("login failed", e);
+    alert("Login failed: " + (e.message || e));
+  }
+});
+
+// Optional logout if you have logout button (id="logoutBtn")
+document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+  } catch(e) {
+    console.error("logout failed", e);
+  }
+});
+
+// onAuthStateChanged: load cloud or keep local
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    console.log("Auth: user logged in", user.uid);
+    await onUserLoggedIn(user);
+  } else {
+    console.log("Auth: no user, staying local");
+    // keep using local
+  }
+});
+
+// ---- Hook your game events to saveLocal() and saveCloud() ----
+// Important: call saveLocal() on any change so browser always has progress.
+// If user logged-in, also call saveCloud(currentUser.uid).
+
+// Example: if your game uses tapBtn, watchAd listeners already, simply add a call to saveLocal()
+// and if (currentUser) saveCloud(currentUser.uid)
+// Below is a small helper you can call from your existing handlers:
+
+async function afterChange() {
+  saveLocal();
+  if (currentUser) {
+    await saveCloud(currentUser.uid);
+  }
+}
+
+// If your existing code uses tap button like:
+// tapBtn.addEventListener("click", () => { ... updateDisplay(); });
+// replace inside handler to call afterChange() after updating values.
+// Example (if you can edit the handler):
+// taps++; if (taps >=500) { blue++; taps=0 } updateDisplay(); afterChange();
+
+// Quick auto-wrap: if updateDisplay exists globally, we can override to auto-save
+if (typeof updateDisplay === "function") {
+  const oldUpdate = updateDisplay;
+  updateDisplay = function() {
+    oldUpdate();
+    // asynchronous save but don't block UI
+    saveLocal();
+    if (currentUser) saveCloud(currentUser.uid).catch(e=>console.error(e));
+  };
+}
+
+// ---- Initial load: try local first so user sees progress even before login ----
+loadLocal();
+
+</script> 
