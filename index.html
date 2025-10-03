@@ -1,1 +1,230 @@
+<!DOCTYPE html>
 
+<html lang="ha">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>TGC Game</title>
+
+<style>
+
+body {
+
+} font-family: 'Segoe UI', sans-serif; background-color: #f4f4f4; /* White background */color: #333; margin: 0; padding: 0; text-align: center;
+
+header (
+
+} background-color: #1f1f1f; color: #ffd700; padding: 20px; font-size: 28px; font-weight: bold;
+
+tap-button {
+
+} margin-top: 50px; width: 150px; height: 150px; background-color: #ffd700: color: black; border: none; border-radius: 50%; font-size: 20px; font-weight: bold; cursor: pointer; transition: transform 0.25;
+
+} tap-button:hover ( transform: scale(1.1);
+
+counters ( margin-top: 30px; font-size: 20px; color: #333;
+
+}
+
+.btn {
+
+} margin-top: 20px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s;
+
+} btn-video ( background-color: #ff9900; color: white;
+
+btn-video:hover { } background-color: #e68a00;
+
+.btn-withdraw } background-color: #28a745; color: white;
+
+} btn-withdraw:hover { background-color: #218838;
+
+} btn-contact { background-color: #007bff; color: white; margin-bottom: 40px;
+
+.btn-contact:hover ( } background-color: #0056b3;
+
+footer { margin-top: 40px; color: #aaa; font-size: 14px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+🪙TGCO🪙
+
+</header>
+  <h1>Welcome to TGC COINS</h1>
+
+<p>Tap to Earn! Reach goals and earn real rewards.</p>
+
+<button class="tap-button" onclick="handleTap()">TAP TAP</button>
+
+<div class="counters">
+
+<p>Total Taps: <span id="tapCount">0</span></p>
+
+<p>Yellow Coins: <span id="yellowCoins">0</span></p>
+
+<p>TGC Coins: <span id="tgcCoins">0</span></p>
+
+<p>USD: $<span id="usdAmount">0.00</span></p>
+
+</div>
+
+<button class="btn btn-video" onclick="watchVideo()">Watch Video (+1 Yellow Coin
+
+)</button><br>
+
+<div>
+
+<button class="btn btn-withdraw" onclick="withdraw()">Withdraw</button><br>
+
+<button class="btn btn-contact" onclick="contactUs()">Contact Us</button>
+
+</div>
+
+<div class="footer">
+
+<p>0 2025 TGC Game. All Rights Reserved.</p>
+
+</div>
+
+<script>
+
+// Load saved data from localStorage
+
+let taps parseInt(localStorage.getItem('taps')) || 0;
+
+let yellowCoins parseInt(localStorage.getItem('yellowCoins')) || 0; let tgcCoins parseInt(localStorage.getItem('tgcCoins")) || 0;
+
+let usd parseFloat(localStorage.getItem('usd')) || 0;
+
+// Update UI
+
+function updateUI() {
+
+document.getElementById('tapCount').textContent taps;
+
+document.getElementById('yellowCoins').textContent yellowCoins;
+
+document.getElementById('tgcCoins').textContent tgcCoins;
+
+document.getElementById('usdAmount").textContent usd.toFixed(2);
+
+}
+
+// Save data
+
+function saveData() {
+
+}
+
+localStorage.setItem('taps, taps);
+
+localStorage.setItem('yellowCoins", yellowCoins);
+
+localStorage.setItem('tgcCoins', tgcCoins);
+
+localStorage.setItem('usd', usd);
+
+// Tap function
+
+function handleTap() {
+
+}
+
+taps++;
+
+if (taps 500) (
+
+}
+
+taps = 0;
+
+yellowCoins++;
+
+if (yellowCoins>= 200) {
+
+yellowCoins 0;
+
+tgcCoins++;
+
+usd += 0.1;
+
+saveData();
+
+updateUI();
+
+// Watch video function
+
+function watchVideo() {
+
+}
+
+yellowCoins++;
+
+if (yellowCoins>= 200) {
+
+}
+
+yellowCoins 0;
+
+tgcCoins++
+
+usd += 0.1
+
+saveData();
+
+updateUI();
+
+// Withdraw function
+
+function withdraw() {
+
+if (usd >= 5) (
+
+alert("Withdrawal successful! (Simulation)");
+
+usd = 0;
+
+tgcCoins 0;
+
+saveData();
+
+updateUI();
+
+} else {
+
+alert("Minimum withdraw is 5 USD"):
+
+}
+
+}
+
+// Contact us function
+
+window.location.href "mailto: support@tgcgame.com?subject=TGC
+
+function contactUs() {
+
+Support&body Please type your message here...":
+
+}
+
+// Initial UI update
+
+updateUI();
+
+</script>
+
+</body>
+
+</html>
